@@ -1,35 +1,46 @@
 #include <Arduino.h>
-#include <Adafruit_NeoPixel.h>
 
-#define LED_PIN     48  // YD-ESP32-S3 onboard WS2812 (IO48)
-#define NUMPIXELS   1   // One RGB LED only
+#define RED_LED 13  // YD-ESP32-S3 onboard WS2812 (IO48)
+#define BLUE_LED 4   // One RGB LED only
+#define BUTTON_MODE_UP 5
+#define BUTTON_MODE_DOWN 0
 
-Adafruit_NeoPixel pixels(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
+int delay_modes_array[] = {100, 200, 500, 1000};
+int modes_length = sizeof(delay_modes_array) / sizeof(delay_modes_array[0]);
+int current_mode = 0;
 
 void setup() {
     Serial.begin(115200);
-    pixels.begin();
-    pixels.setBrightness(100); // Brightness (0~255)
-    Serial.println("Rainbow demo start with brightness 100");
+    pinMode(RED_LED, OUTPUT);
+    pinMode(BLUE_LED, OUTPUT);
+    pinMode(BUTTON_MODE_UP, INPUT_PULLUP);
+    pinMode(BUTTON_MODE_DOWN, INPUT_PULLUP);
 }
 
-uint32_t Wheel(byte pos) {
-    pos = 255 - pos;
-    if(pos < 85) {
-        return pixels.Color(255 - pos * 3, 0, pos * 3);
-    } else if(pos < 170) {
-        pos -= 85;
-        return pixels.Color(0, pos * 3, 255 - pos * 3);
-    } else {
-        pos -= 170;
-        return pixels.Color(pos * 3, 255 - pos * 3, 0);
-    }
-}
 
 void loop() {
-    for(int i = 0; i < 256; i++) {
-        pixels.setPixelColor(0, Wheel(i));
-        pixels.show();
-        delay(20);
+    if (digitalRead(BUTTON_MODE_UP) == LOW) {
+        current_mode += 1; // Cycle through modes
+        if (current_mode >= modes_length) {
+            current_mode = modes_length - 1; // Wrap around to the first mode
+        }
+        Serial.print("Current mode: ");
+        Serial.println(current_mode);
     }
+
+    if (digitalRead(BUTTON_MODE_DOWN) == LOW) {
+        current_mode = (current_mode - 1);// Cycle through modes in reverse
+        if (current_mode < 0) {
+            current_mode = 0; // Wrap around to the last mode
+        }
+        Serial.print("Current mode: ");
+        Serial.println(current_mode);
+    }
+
+    digitalWrite(RED_LED, HIGH);
+    digitalWrite(BLUE_LED, LOW);
+    delay(delay_modes_array[current_mode]);
+    digitalWrite(RED_LED, LOW);
+    digitalWrite(BLUE_LED, HIGH);
+    delay(delay_modes_array[current_mode]);
 }
