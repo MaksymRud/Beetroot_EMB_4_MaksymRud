@@ -21,5 +21,5 @@ void setup() {
 
 void loop() {
   Serial.println("Button is held down!");
-  delay(250);
+  delay(20);
 }
