@@ -1,17 +1,15 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 
-#define LED_PIN     48  // YD-ESP32-S3 onboard WS2812 (IO48)
-#define NUMPIXELS   1   // One RGB LED only
+#define LED_STRIP_PIN 21
+#define NUMPIXELS     1
+#define ADC_INPUT_PIN 4  // YD-ESP32-S3 onboard WS2812 (IO48)
 
-Adafruit_NeoPixel pixels(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
+bool roomIsDark = false;
+unsigned long before = millis();
+unsigned long now = millis();
 
-void setup() {
-    Serial.begin(115200);
-    pixels.begin();
-    pixels.setBrightness(100); // Brightness (0~255)
-    Serial.println("Rainbow demo start with brightness 100");
-}
+Adafruit_NeoPixel pixels(NUMPIXELS, LED_STRIP_PIN, NEO_GRB + NEO_KHZ800);
 
 uint32_t Wheel(byte pos) {
     pos = 255 - pos;
@@ -26,10 +24,36 @@ uint32_t Wheel(byte pos) {
     }
 }
 
+void setup() {
+    Serial.begin(115200);
+    analogReadResolution(12);
+    pinMode(ADC_INPUT_PIN, INPUT);
+    pixels.begin();
+    pixels.setBrightness(100); // Brightness (0~255)
+    pixels.show(); // Initialize all pixels to 'off'
+    Serial.println("Rainbow demo start with brightness 100");
+}
+
+
 void loop() {
-    for(int i = 0; i < 256; i++) {
-        pixels.setPixelColor(0, Wheel(i));
-        pixels.show();
-        delay(20);
+    float actual_voltage = 0.0;
+    unsigned long now = millis();
+
+    if ((now - before) >= 10000) {
+        before = now;
+        actual_voltage = analogReadMilliVolts(ADC_INPUT_PIN) / 1000.0;
+        Serial.printf("Voltage: %.3f V\n", actual_voltage);
+        if (actual_voltage < 1.0) {
+            roomIsDark = true;
+        } else {
+            roomIsDark = false;
+        }
     }
+
+    if (roomIsDark) {
+        pixels.setPixelColor(0, pixels.Color(255, 0, 0)); // Red
+    } else {
+        pixels.setPixelColor(0, pixels.Color(0, 255, 0)); // Green
+    }
+    pixels.show();
 }
