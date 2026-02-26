@@ -51,7 +51,11 @@ void loop() {
     }
 
     if (roomIsDark) {
-        pixels.setPixelColor(0, pixels.Color(255, 0, 0)); // Red
+        for(int i = 0; i < 256; i++) {
+        pixels.setPixelColor(0, Wheel(i));
+        pixels.show();
+        delay(20);
+    }
     } else {
         pixels.setPixelColor(0, pixels.Color(0, 255, 0)); // Green
     }
