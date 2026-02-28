@@ -2,7 +2,7 @@
 #include <Adafruit_NeoPixel.h>
 
 #define LED_STRIP_PIN 21
-#define NUMPIXELS     1
+#define NUMPIXELS     5
 #define ADC_INPUT_PIN 4  // YD-ESP32-S3 onboard WS2812 (IO48)
 
 bool roomIsDark = false;
@@ -24,39 +24,54 @@ uint32_t Wheel(byte pos) {
     }
 }
 
+bool IsRoomDark() {
+    float actual_voltage = analogReadMilliVolts(ADC_INPUT_PIN) / 1000.0;
+    Serial.printf("Voltage: %.3f V\n", actual_voltage);
+    return actual_voltage < 1.0 ? true : false;
+}
+
 void setup() {
     Serial.begin(115200);
     analogReadResolution(12);
     pinMode(ADC_INPUT_PIN, INPUT);
     pixels.begin();
-    pixels.setBrightness(100); // Brightness (0~255)
-    pixels.show(); // Initialize all pixels to 'off'
-    Serial.println("Rainbow demo start with brightness 100");
+    pixels.setBrightness(50);
+    pixels.show();
+    Serial.println("Rainbow demo start with brightness 50");
 }
+\
 
 
 void loop() {
-    float actual_voltage = 0.0;
     unsigned long now = millis();
 
-    if ((now - before) >= 10000) {
+    if ((now - before) >= 3000) {
         before = now;
-        actual_voltage = analogReadMilliVolts(ADC_INPUT_PIN) / 1000.0;
-        Serial.printf("Voltage: %.3f V\n", actual_voltage);
-        if (actual_voltage < 1.0) {
-            roomIsDark = true;
-        } else {
-            roomIsDark = false;
-        }
+        roomIsDark = IsRoomDark();
     }
 
     if (roomIsDark) {
         for(int i = 0; i < 256; i++) {
-            pixels.setPixelColor(0, Wheel(i));
+            for (int j = 0; j < NUMPIXELS; j++) {
+                pixels.setPixelColor(j,Wheel(i));
+                pixels.show();
+                delay(5);
+                if (!IsRoomDark()) {
+                    roomIsDark = false;
+                    break;
+                }
+            }
         }
     } else {
-        pixels.setPixelColor(0, pixels.Color(0, 255, 0)); // Green
+        for (int j = 0; j < NUMPIXELS; j++) {
+            pixels.setPixelColor(j, pixels.Color(0, 0, 0));
+            pixels.show();
+            delay(5);
+            if (IsRoomDark()) {
+                roomIsDark = true;
+                break;
+            }
+        }
     }
-    pixels.show();
-    delay(20);
+    
 }
