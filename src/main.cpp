@@ -1,35 +1,44 @@
 #include <Arduino.h>
-#include <Adafruit_NeoPixel.h>
 
-#define LED_PIN     48  // YD-ESP32-S3 onboard WS2812 (IO48)
-#define NUMPIXELS   1   // One RGB LED only
+constexpr uint8_t Relay_Control_Pin = 4;
+constexpr uint8_t Reley_Open_Pin = 38;
+constexpr uint8_t Button_Pin = 6; // ms
+constexpr uint32_t Delay_Between_Experiments = 10000;
+volatile bool relayIsOpen = false;
+volatile bool buttonPressed = false;
+unsigned long control_input_time = 0;
+unsigned long relay_open_time = 0;
 
-Adafruit_NeoPixel pixels(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
-
-void setup() {
-    Serial.begin(115200);
-    pixels.begin();
-    pixels.setBrightness(100); // Brightness (0~255)
-    Serial.println("Rainbow demo start with brightness 100");
+void IRAM_ATTR handleRelayOpenInterrupt() {
+    relayIsOpen = true;
 }
 
-uint32_t Wheel(byte pos) {
-    pos = 255 - pos;
-    if(pos < 85) {
-        return pixels.Color(255 - pos * 3, 0, pos * 3);
-    } else if(pos < 170) {
-        pos -= 85;
-        return pixels.Color(0, pos * 3, 255 - pos * 3);
-    } else {
-        pos -= 170;
-        return pixels.Color(pos * 3, 255 - pos * 3, 0);
-    }
+void IRAM_ATTR handleButtonInterrupt() {
+    buttonPressed = true;
+}
+
+void setup() {
+  // put your setup code here, to run once:
+    pinMode(Relay_Control_Pin, OUTPUT);
+    pinMode(Reley_Open_Pin, INPUT_PULLUP);
+    pinMode(Button_Pin, INPUT_PULLDOWN);
+    attachInterrupt(digitalPinToInterrupt(Button_Pin), handleButtonInterrupt, RISING);
+    attachInterrupt(digitalPinToInterrupt(Reley_Open_Pin), handleRelayOpenInterrupt, RISING);
+    digitalWrite(Relay_Control_Pin, HIGH);
 }
 
 void loop() {
-    for(int i = 0; i < 256; i++) {
-        pixels.setPixelColor(0, Wheel(i));
-        pixels.show();
-        delay(20);
+    if (buttonPressed) {
+        buttonPressed = false;
+        digitalWrite(Relay_Control_Pin, LOW);
+        control_input_time = millis();
+        Serial.printf("Try to open relay! Time: %lu ms\n", control_input_time);
+    }
+
+    if (relayIsOpen) {
+        relayIsOpen = false;
+        relay_open_time = millis();
+        digitalWrite(Relay_Control_Pin, HIGH);
+        Serial.printf("Relay opened! On time: %lu ms \nTime since control input: %lu ms\n", relay_open_time, relay_open_time - control_input_time);
     }
 }
