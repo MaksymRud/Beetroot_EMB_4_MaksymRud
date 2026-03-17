@@ -1,35 +1,26 @@
 #include <Arduino.h>
-#include <Adafruit_NeoPixel.h>
+#include <atomic>
 
-#define LED_PIN     48  // YD-ESP32-S3 onboard WS2812 (IO48)
-#define NUMPIXELS   1   // One RGB LED only
+constexpr uint8_t Button_Pin = 6; // ms
+volatile bool buttonPressed = false;
+volatile unsigned long lastButtonInterruptTime = 0;
+std::atomic<int> control_input_time(0);
+/*
+    Task 1: no debounce
+*/
 
-Adafruit_NeoPixel pixels(NUMPIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
-
-void setup() {
-    Serial.begin(115200);
-    pixels.begin();
-    pixels.setBrightness(100); // Brightness (0~255)
-    Serial.println("Rainbow demo start with brightness 100");
+void IRAM_ATTR handleButtonInterrupt() {
+    control_input_time.fetch_add(1);
+    lastButtonInterruptTime = millis();
 }
 
-uint32_t Wheel(byte pos) {
-    pos = 255 - pos;
-    if(pos < 85) {
-        return pixels.Color(255 - pos * 3, 0, pos * 3);
-    } else if(pos < 170) {
-        pos -= 85;
-        return pixels.Color(0, pos * 3, 255 - pos * 3);
-    } else {
-        pos -= 170;
-        return pixels.Color(pos * 3, 255 - pos * 3, 0);
-    }
+void setup() {
+  // put your setup code here, to run once:
+    Serial.begin(115200);
+    pinMode(Button_Pin, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(Button_Pin), handleButtonInterrupt, FALLING);
 }
 
 void loop() {
-    for(int i = 0; i < 256; i++) {
-        pixels.setPixelColor(0, Wheel(i));
-        pixels.show();
-        delay(20);
-    }
+
 }
