@@ -2,10 +2,8 @@
 #include <atomic>
 
 constexpr uint8_t Button_Pin = 6;
-constexpr unsigned long DebounceDelay = 50; // ms
 volatile bool buttonPressed = false;
 volatile unsigned long lastButtonInterruptTime = 0;
-unsigned long lastAcceptedPressTime = 0;
 std::atomic<int> interrupts_counter(0);
 std::atomic<int> accepted_counter(0);
 hw_timer_t *Timer = nullptr;
@@ -13,9 +11,11 @@ constexpr long WorkingTime = 30000000;
 volatile bool timerExpired = false;
 
 /*
-    Task 2: time-based software debounce
-    - ISR only records timestamp and sets flag
-    - Debounce check (< 50 ms) is done in loop()
+    Task 3: state-based debounce using pin level
+    - ISR sets flag on FALLING edge
+    - loop() reads actual pin level:
+      LOW  (pressed)  → accept the press
+      HIGH (released) → ignore (bounce / release)
 */
 
 void ARDUINO_ISR_ATTR onStopFanTimer() {
@@ -47,15 +47,17 @@ void setup() {
 void loop() {
     if (buttonPressed) {
         buttonPressed = false;
-        unsigned long now = millis();
-        if (now - lastAcceptedPressTime >= DebounceDelay) {
-            lastAcceptedPressTime = now;
+
+        int pinState = digitalRead(Button_Pin);
+
+        if (pinState == LOW) {                       // button is still held → real press
             accepted_counter.fetch_add(1);
-            Serial.printf("Button pressed! Accepted: %d, Raw interrupts: %d, Time since last: %lu ms\n",
-                          accepted_counter.load(), interrupts_counter.load(), now - lastButtonInterruptTime);
-        } else {
-            Serial.printf("Bounce ignored (dt=%lu ms). Raw interrupts: %d\n",
-                          now - lastAcceptedPressTime, interrupts_counter.load());
+            unsigned long dt = millis() - lastButtonInterruptTime;
+            Serial.printf("Button pressed (pin LOW)! Accepted: %d, Raw interrupts: %d, ISR->accept: %lu ms\n",
+                          accepted_counter.load(), interrupts_counter.load(), dt);
+        } else {                                     // pin already HIGH → bounce / release
+            Serial.printf("Bounce ignored (pin HIGH). Raw interrupts: %d\n",
+                          interrupts_counter.load());
         }
     }
     if (timerExpired) {
