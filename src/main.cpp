@@ -1,62 +1,80 @@
 #include <Arduino.h>
+#include <OneButton.h>
 
 constexpr uint8_t Relay_Control_Pin = 4;
-constexpr uint8_t Reley_Open_Pin = 38;
 constexpr uint8_t Button_Pin = 6; // ms
-volatile bool relayIsOpen = false;
-volatile bool buttonPressed = false;
-unsigned long control_input_time = 0;
-volatile unsigned long lastButtonInterruptTime = 0;
-volatile unsigned long lastRelayInterruptTime = 0;
-unsigned long relay_open_time = 0;
+OneButton button(Button_Pin, true, true);
+volatile bool FanWorks = false;
+volatile bool FanIdle = false;
+hw_timer_t *fanTimer = nullptr;
+constexpr long Fan_Working_Time = 1000000;
+constexpr long Fan_Idle_Time = 5000000;
+bool fanProcessActive = false;
+unsigned long lastSerialPrintTime = 0;
 
-void IRAM_ATTR handleRelayOpenInterrupt() {
-    unsigned long currentTime = millis();
-    if (currentTime - lastRelayInterruptTime > 50) {
-        lastRelayInterruptTime = currentTime;
-        relayIsOpen = true;
+
+void ARDUINO_ISR_ATTR onStopFanTimer() {
+	if (FanWorks) {
+        FanWorks = false;
+        FanIdle = true;
+        timerAlarmWrite(fanTimer, Fan_Idle_Time, true);
+    } else if (FanIdle) {
+        FanIdle = false;
+        FanWorks = true;
+        timerAlarmWrite(fanTimer, Fan_Working_Time, true);
     }
 }
 
-void IRAM_ATTR handleButtonInterrupt() {
-    unsigned long currentTime = millis();
-    if (currentTime - lastButtonInterruptTime > 50) {
-        lastButtonInterruptTime = currentTime;
-        buttonPressed = true;
-    }
+void startFanProcess() {
+	if (!fanProcessActive) {
+		fanTimer = timerBegin(0, 80, true);
+		timerAttachInterrupt(fanTimer, &onStopFanTimer, true);
+		timerAlarmWrite(fanTimer, Fan_Working_Time, true);
+		timerAlarmEnable(fanTimer);
+        FanWorks = true;
+		fanProcessActive = true;
+		Serial.println("Timer started...");
+	}
+}
+
+void stopFanProcess() {
+	if (fanProcessActive) {
+		timerDetachInterrupt(fanTimer);
+		timerEnd(fanTimer);
+		fanTimer = nullptr;
+		fanProcessActive = false;
+		Serial.println("!!! Timer stopped by user !!!");
+	}
+}
+
+void toggleTimer() {
+	if (fanProcessActive) {
+		stopFanProcess();
+	} else {
+		startFanProcess();
+	}
 }
 
 void setup() {
-  // put your setup code here, to run once:
-    Serial.begin(115200);
+	Serial.begin(115200);
+	button.attachClick(toggleTimer);
     pinMode(Relay_Control_Pin, OUTPUT);
-    pinMode(Reley_Open_Pin, INPUT_PULLDOWN);
-    pinMode(Button_Pin, INPUT_PULLDOWN);
-    attachInterrupt(digitalPinToInterrupt(Button_Pin), handleButtonInterrupt, RISING);
-    attachInterrupt(digitalPinToInterrupt(Reley_Open_Pin), handleRelayOpenInterrupt, RISING);
-    digitalWrite(Relay_Control_Pin, LOW);
 }
 
 void loop() {
-    if (buttonPressed) {
+    unsigned long currentTime = millis();
+	button.tick();
+    if (FanWorks) {
         if (digitalRead(Relay_Control_Pin) == LOW) {
             digitalWrite(Relay_Control_Pin, HIGH);
-            control_input_time = millis();
-            Serial.printf("Try to open relay! Time: %lu ms\n", control_input_time);
-        } else {
+            Serial.printf("Try to open relay!\n");
+            Serial.print("Fan is working\n");
+        }
+    } else if (FanIdle) {
+        if (digitalRead(Relay_Control_Pin) == HIGH) {
             digitalWrite(Relay_Control_Pin, LOW);
             Serial.printf("Try to close relay!\n");
-        }
-        buttonPressed = false;
-    }
-
-    if (relayIsOpen) {
-        relayIsOpen = false;
-        relay_open_time = millis();
-        if (digitalRead(Relay_Control_Pin) == LOW) {
-            Serial.printf("Relay debounced on closing!\n");
-        } else {
-            Serial.printf("Relay opened! Time since control input: %lu ms\n", relay_open_time - control_input_time);
+            Serial.print("Fan is idle\n");
         }
     }
 }
