@@ -5,6 +5,9 @@ constexpr uint8_t Button_Pin = 6; // ms
 volatile bool buttonPressed = false;
 volatile unsigned long lastButtonInterruptTime = 0;
 std::atomic<int> control_input_time(0);
+hw_timer_t *Timer = nullptr;
+constexpr long WorkingTime = 1000000;
+
 /*
     Task 1: no debounce
 */
