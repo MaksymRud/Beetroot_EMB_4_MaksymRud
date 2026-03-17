@@ -1,16 +1,21 @@
 #include <Arduino.h>
 #include <atomic>
 
-constexpr uint8_t Button_Pin = 6; // ms
+constexpr uint8_t Button_Pin = 6;
+constexpr unsigned long DebounceDelay = 50; // ms
 volatile bool buttonPressed = false;
 volatile unsigned long lastButtonInterruptTime = 0;
+unsigned long lastAcceptedPressTime = 0;
 std::atomic<int> interrupts_counter(0);
+std::atomic<int> accepted_counter(0);
 hw_timer_t *Timer = nullptr;
 constexpr long WorkingTime = 30000000;
 volatile bool timerExpired = false;
 
 /*
-    Task 1: no debounce
+    Task 2: time-based software debounce
+    - ISR only records timestamp and sets flag
+    - Debounce check (< 50 ms) is done in loop()
 */
 
 void ARDUINO_ISR_ATTR onStopFanTimer() {
@@ -41,11 +46,21 @@ void setup() {
 
 void loop() {
     if (buttonPressed) {
-        Serial.printf("Button pressed! Interrupts count: %d, Time difference: %lu ms\n", interrupts_counter.load(), millis() - lastButtonInterruptTime);
         buttonPressed = false;
+        unsigned long now = millis();
+        if (now - lastAcceptedPressTime >= DebounceDelay) {
+            lastAcceptedPressTime = now;
+            accepted_counter.fetch_add(1);
+            Serial.printf("Button pressed! Accepted: %d, Raw interrupts: %d, Time since last: %lu ms\n",
+                          accepted_counter.load(), interrupts_counter.load(), now - lastButtonInterruptTime);
+        } else {
+            Serial.printf("Bounce ignored (dt=%lu ms). Raw interrupts: %d\n",
+                          now - lastAcceptedPressTime, interrupts_counter.load());
+        }
     }
     if (timerExpired) {
-        Serial.printf("Timer expired! All interrupts: %d\n", interrupts_counter.load());
+        Serial.printf("Timer expired! Accepted: %d, Raw interrupts: %d\n",
+                      accepted_counter.load(), interrupts_counter.load());
         timerExpired = false;
     }
 }
