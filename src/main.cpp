@@ -1,21 +1,25 @@
 #include <Arduino.h>
 #include <atomic>
+#include "Button_FSM.h"
 
 constexpr uint8_t Button_Pin = 6;
-volatile bool buttonPressed = false;
+constexpr unsigned long POLL_INTERVAL_MS = 5;
+
 volatile unsigned long lastButtonInterruptTime = 0;
 std::atomic<int> interrupts_counter(0);
-std::atomic<int> accepted_counter(0);
+int accepted_counter = 0;
+
 hw_timer_t *Timer = nullptr;
 constexpr long WorkingTime = 30000000;
 volatile bool timerExpired = false;
 
+Button_FSM_t button;
+unsigned long lastPollTime = 0;
+
 /*
-    Task 3: state-based debounce using pin level
-    - ISR sets flag on FALLING edge
-    - loop() reads actual pin level:
-      LOW  (pressed)  → accept the press
-      HIGH (released) → ignore (bounce / release)
+    Task 4: polling + FSM debounce
+    - ISR only counts raw interrupts and records timestamp
+    - loop() polls pin every 5 ms via Button_FSM_Update
 */
 
 void ARDUINO_ISR_ATTR onStopFanTimer() {
@@ -25,7 +29,6 @@ void ARDUINO_ISR_ATTR onStopFanTimer() {
 void IRAM_ATTR handleButtonInterrupt() {
     interrupts_counter.fetch_add(1);
     lastButtonInterruptTime = millis();
-    buttonPressed = true;
 }
 
 void startTimer() {
@@ -37,32 +40,31 @@ void startTimer() {
 }
 
 void setup() {
-    // put your setup code here, to run once:
     Serial.begin(115200);
-    pinMode(Button_Pin, INPUT_PULLUP);
+    Button_FSM_Init(&button, Button_Pin, 30, 50, 800);
     attachInterrupt(digitalPinToInterrupt(Button_Pin), handleButtonInterrupt, FALLING);
     startTimer();
 }
 
 void loop() {
-    if (buttonPressed) {
-        buttonPressed = false;
+    unsigned long currentPollingTime = millis();
 
-        int pinState = digitalRead(Button_Pin);
+    if (currentPollingTime - lastPollTime >= POLL_INTERVAL_MS) {
+        lastPollTime = currentPollingTime;
+        Button_FSM_Update(&button);
 
-        if (pinState == LOW) {                       // button is still held → real press
-            accepted_counter.fetch_add(1);
+        bool isLong = false;
+        if (Button_FSM_IsPressed(&button, isLong)) {
+            accepted_counter++;
             unsigned long dt = millis() - lastButtonInterruptTime;
-            Serial.printf("Button pressed (pin LOW)! Accepted: %d, Raw interrupts: %d, ISR->accept: %lu ms\n",
-                          accepted_counter.load(), interrupts_counter.load(), dt);
-        } else {                                     // pin already HIGH → bounce / release
-            Serial.printf("Bounce ignored (pin HIGH). Raw interrupts: %d\n",
-                          interrupts_counter.load());
+            Serial.printf("Button %s press! Accepted: %d, Raw interrupts: %d, ISR->accept: %lu ms\n",
+                          isLong ? "LONG" : "SHORT",
+                          accepted_counter, interrupts_counter.load(), dt);
         }
     }
     if (timerExpired) {
         Serial.printf("Timer expired! Accepted: %d, Raw interrupts: %d\n",
-                      accepted_counter.load(), interrupts_counter.load());
+                      accepted_counter, interrupts_counter.load());
         timerExpired = false;
     }
 }
