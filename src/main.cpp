@@ -13,7 +13,6 @@ constexpr uint8_t LogicAnalyzer_Pin = 21;
 constexpr unsigned long debounceDelay_us = 50000; // debounce delay in microseconds
 volatile bool buttonPressed = false;
 volatile unsigned long lastButtonInterruptTime = 0;
-unsigned long buttonAcceptedTime_us = 0;
 unsigned long buttonStartWaitAcceptanceTime_us = 0;
 unsigned long lastButtonStateChangeTime = 0;
 std::atomic<int> interrupts_counter(0);
@@ -68,10 +67,6 @@ void loop() {
             case ButtonState::ButtonHeld:
                 if (pinState == LOW) {
                     buttonState = ButtonState::ButtonHeld;
-                    accepted_counter.fetch_add(1);
-                    unsigned long dt = micros() - buttonStartWaitAcceptanceTime_us;
-                    Serial.printf("Button pressed (pin LOW)! Accepted: %d, Raw interrupts: %d, ISR->accept: %lu ms\n",
-                          accepted_counter.load(), interrupts_counter.load(), dt);
                 } else {
                     lastButtonStateChangeTime = micros();
                     buttonState = ButtonState::ButtonReleased;
@@ -81,6 +76,10 @@ void loop() {
                 if (pinState == HIGH) {
                     if (micros() - lastButtonStateChangeTime >= debounceDelay_us) {
                         buttonState = ButtonState::ButtonIdle;
+                        accepted_counter.fetch_add(1);
+                        unsigned long dt = micros() - buttonStartWaitAcceptanceTime_us;
+                        Serial.printf("Button pressed (pin LOW)! Accepted: %d, Raw interrupts: %d, ISR->accept: %lu ms\n",
+                          accepted_counter.load(), interrupts_counter.load(), dt / 1000);
                         buttonPressed = false;
                     }
                 };
