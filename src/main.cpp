@@ -2,7 +2,7 @@
 #include <atomic>
 
 constexpr uint8_t Button_Pin = 6;
-constexpr uint8_t LogicAnalizer_Pin = 2;
+constexpr uint8_t LogicAnalizer_Pin = 21;
 volatile bool buttonPressed = false;
 volatile unsigned long lastButtonInterruptTime = 0;
 std::atomic<int> interrupts_counter(0);
@@ -25,6 +25,7 @@ void setup() {
     Serial.begin(115200);
     pinMode(Button_Pin, INPUT_PULLUP);
     pinMode(LogicAnalizer_Pin, OUTPUT);
+    digitalWrite(LogicAnalizer_Pin, LOW);
     attachInterrupt(digitalPinToInterrupt(Button_Pin), handleButtonInterrupt, FALLING);
 }
 
