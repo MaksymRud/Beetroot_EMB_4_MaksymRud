@@ -10,7 +10,8 @@ enum ButtonState {
 
 constexpr uint8_t Button_Pin = 6;
 constexpr uint8_t LogicAnalyzer_Pin = 21;
-constexpr unsigned long debounceDelay_us = 50000; // debounce delay in microseconds
+constexpr unsigned long debounceDelay_us = 50000;
+
 volatile bool buttonPressed = false;
 volatile unsigned long lastButtonInterruptTime = 0;
 unsigned long buttonStartWaitAcceptanceTime_us = 0;
