@@ -1,14 +1,13 @@
 #include <Arduino.h>
 #include <atomic>
 
-constexpr uint8_t Button_Pin = 6;
-constexpr uint8_t LogicAnalizer_Pin = 21;
+#define Button_Pin 6
+#define LogicAnalizer_Pin 21
+
 volatile bool buttonPressed = false;
-volatile unsigned long lastButtonInterruptTime = 0;
+volatile unsigned long lastButtonInterruptTime_us = 0;
 std::atomic<int> interrupts_counter(0);
-hw_timer_t *Timer = nullptr;
-constexpr unsigned long WorkingTime_us = 30000000;
-volatile bool timerExpired = false;
+int accept_button_counter = 0;
 
 /*
     Task 1: no debounce
@@ -16,7 +15,7 @@ volatile bool timerExpired = false;
 
 void IRAM_ATTR handleButtonInterrupt() {
     interrupts_counter.fetch_add(1);
-    lastButtonInterruptTime = millis();
+    lastButtonInterruptTime_us = micros();
     buttonPressed = true;
 }
 
@@ -31,7 +30,8 @@ void setup() {
 
 void loop() {
     if (buttonPressed) {
-        Serial.printf("Button pressed! Interrupts count: %d, Time difference: %lu ms\n", interrupts_counter.load(), millis() - lastButtonInterruptTime);
+        accept_button_counter++;
+        Serial.printf("Button pressed! Accepted count: %d, Interrupts count: %d, Time difference: %lu us\n", accept_button_counter, interrupts_counter.load(), (micros() - lastButtonInterruptTime_us));
         buttonPressed = false;
     }
     digitalWrite(LogicAnalizer_Pin, digitalRead(Button_Pin));
