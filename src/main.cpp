@@ -1,15 +1,14 @@
 #include <Arduino.h>
 #include <atomic>
 
-constexpr uint8_t Button_Pin = 6;
-constexpr uint8_t LogicAnalyzer_Pin = 21;
+#define Button_Pin 6
+#define LogicAnalyzer_Pin 21
+
 constexpr unsigned long DebounceDelay_us = 50000;
 volatile bool buttonPressed = false;
-volatile unsigned long lastButtonInterruptTime = 0;
-unsigned long lastAcceptedPressTime = 0;
+volatile unsigned long lastButtonInterruptTime_us = 0;
 std::atomic<int> interrupts_counter(0);
 std::atomic<int> accepted_counter(0);
-volatile bool timerExpired = false;
 
 /*
     Task 2: time-based software debounce
@@ -19,7 +18,7 @@ volatile bool timerExpired = false;
 
 void IRAM_ATTR handleButtonInterrupt() {
     interrupts_counter.fetch_add(1);
-    lastButtonInterruptTime = micros();
+    lastButtonInterruptTime_us = micros();
     buttonPressed = true;
 }
 
@@ -34,17 +33,12 @@ void setup() {
 
 void loop() {
     if (buttonPressed) {
-        buttonPressed = false;
-        unsigned long now = micros();
-        if (now - lastAcceptedPressTime >= DebounceDelay_us) {
-            lastAcceptedPressTime = now;
+        if (micros() - lastButtonInterruptTime_us >= DebounceDelay_us) {
+            buttonPressed = false;
             accepted_counter.fetch_add(1);
             Serial.printf("Button pressed! Accepted: %d, Raw interrupts: %d, Time since last: %lu us\n",
-                          accepted_counter.load(), interrupts_counter.load(), now - lastButtonInterruptTime);
-        } else {
-            Serial.printf("Bounce ignored (dt=%lu us). Raw interrupts: %d\n",
-                          now - lastAcceptedPressTime, interrupts_counter.load());
+                          accepted_counter.load(), interrupts_counter.load(), micros() - lastButtonInterruptTime_us);
         }
     }
-    digitalWrite(LogicAnalyzer_Pin, !digitalRead(LogicAnalyzer_Pin)); // Toggle logic analyzer pin for timing visualization
+    digitalWrite(LogicAnalyzer_Pin, digitalRead(Button_Pin));
 }
