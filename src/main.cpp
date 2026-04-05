@@ -5,6 +5,7 @@
 #define Button_Pin 6
 
 constexpr unsigned long POLL_INTERVAL_MS = 5;
+
 volatile unsigned long lastButtonInterruptTime = 0;
 std::atomic<int> interrupts_counter(0);
 int accepted_counter = 0;
