@@ -21,11 +21,19 @@ volatile bool timerExpired = false;
 uint8_t buttonState = ButtonIdle;
 
 /*
-    Task 3: state-based debounce using pin level
-    - ISR sets flag on FALLING edge
-    - loop() reads actual pin level:
-      LOW  (pressed)  → accept the press
-      HIGH (released) → ignore (bounce / release)
+    Task 3: Button debounce using a finite state machine (FSM)
+
+    An ISR attached to the FALLING edge sets a flag and records the
+    interrupt timestamp.  The main loop then drives a four-state FSM
+    that filters contact bounce by requiring the pin to remain stable
+    for a full debounce interval (50 ms) before accepting a transition:
+
+      Idle  ──(pin LOW)──▸  Pressed  ──(stable LOW ≥ 50 ms)──▸  Held
+      Held  ──(pin HIGH)──▸ Released ──(stable HIGH ≥ 50 ms)──▸ Idle
+
+    On the Released → Idle transition the press is counted and the
+    elapsed time from the first interrupt to acceptance is printed.
+    A logic-analyser output pin mirrors the button state in real time.
 */
 
 void IRAM_ATTR handleButtonInterrupt() {
