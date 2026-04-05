@@ -5,6 +5,7 @@
 #define LogicAnalyzer_Pin 21
 
 constexpr unsigned long DebounceDelay_us = 50000;
+
 volatile bool buttonPressed = false;
 volatile unsigned long lastButtonInterruptTime_us = 0;
 std::atomic<int> interrupts_counter(0);
