@@ -1,0 +1,8 @@
+{
+    "name": "Button_ESPIDF",
+    "version": "1.0.0",
+    "description": "ESP-IDF framework implementation of Button FSM",
+    "dependencies": {
+        "Button_Common": "*"
+    }
+}

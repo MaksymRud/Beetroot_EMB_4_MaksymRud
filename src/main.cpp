@@ -1,38 +1,68 @@
+#ifdef ARDUINO
+// ── Arduino framework ──────────────────────────────────────────────
 #include <Arduino.h>
-#include <atomic>
+#include "Button_Arduino.h"
 
 #define Button_Pin 6
 #define LogicAnalizer_Pin 21
 
-volatile bool buttonPressed = false;
-volatile unsigned long lastButtonInterruptTime_us = 0;
-std::atomic<int> interrupts_counter(0);
+static ButtonSimpleArduino button(Button_Pin, 50);
 int accept_button_counter = 0;
 
-/*
-    Task 1: no debounce
-*/
-
-void IRAM_ATTR handleButtonInterrupt() {
-    interrupts_counter.fetch_add(1);
-    lastButtonInterruptTime_us = micros();
-    buttonPressed = true;
-}
-
 void setup() {
-    // put your setup code here, to run once:
     Serial.begin(115200);
-    pinMode(Button_Pin, INPUT_PULLUP);
     pinMode(LogicAnalizer_Pin, OUTPUT);
     digitalWrite(LogicAnalizer_Pin, LOW);
-    attachInterrupt(digitalPinToInterrupt(Button_Pin), handleButtonInterrupt, FALLING);
+    button.init();   // configures pin + attaches ISR internally
 }
 
 void loop() {
-    if (buttonPressed) {
+    button.update();
+    if (button.isPressed()) {
         accept_button_counter++;
-        Serial.printf("Button pressed! Accepted count: %d, Interrupts count: %d, Time difference: %lu us\n", accept_button_counter, interrupts_counter.load(), (micros() - lastButtonInterruptTime_us));
-        buttonPressed = false;
+        Serial.printf("Button pressed! Accepted: %d, Interrupts: %lu, dt: %lu us\n",
+                       accept_button_counter,
+                       button.interruptCount_,
+                       (micros() - button.lastInterruptTime_));
     }
     digitalWrite(LogicAnalizer_Pin, digitalRead(Button_Pin));
 }
+
+#else
+// ── ESP-IDF framework ─────────────────────────────────────────────
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/gpio.h"
+#include "Button_ESPIDF.h"
+
+#define Button_Pin 6
+#define LogicAnalizer_Pin 21
+
+extern "C" void app_main(void) {
+    // Configure logic analyser output pin
+    gpio_config_t io_conf = {};
+    io_conf.pin_bit_mask = (1ULL << LogicAnalizer_Pin);
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    gpio_config(&io_conf);
+    gpio_set_level((gpio_num_t)LogicAnalizer_Pin, 0);
+
+    ButtonSimpleESPIDF button(Button_Pin, 50);
+    button.init();
+
+    while (1) {
+        button.update();
+        if (button.isPressed()) {
+            printf("Button pressed! Interrupts: %lu\n",
+                   button.interruptCount_);
+        }
+        gpio_set_level((gpio_num_t)LogicAnalizer_Pin,
+                       gpio_get_level((gpio_num_t)Button_Pin));
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
+#endif

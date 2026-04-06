@@ -1,0 +1,8 @@
+{
+    "name": "Button_Arduino",
+    "version": "1.0.0",
+    "description": "Arduino framework implementation of Button FSM",
+    "dependencies": {
+        "Button_Common": "*"
+    }
+}
