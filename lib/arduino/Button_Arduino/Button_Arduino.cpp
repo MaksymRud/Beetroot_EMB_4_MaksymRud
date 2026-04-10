@@ -1,34 +1,53 @@
 #include "Button_Arduino.h"
 
-// ── Arduino ISR handlers ──────────────────────────────────────────
+// ── ButtonSimpleArduino ───────────────────────────────────────────
+
+ButtonSimpleArduino::ButtonSimpleArduino(uint8_t pin, uint16_t debounce_time,
+                                         uint8_t mode)
+    : ButtonSimple(pin, debounce_time),
+      mode(mode), acceptCount_(0) {}
+
+void ButtonSimpleArduino::init() {
+    pinMode(pin_, mode);
+    attachInterruptArg(digitalPinToInterrupt(pin_), isrHandler, this, FALLING);
+}
+
+void ButtonSimpleArduino::update() {
+    if (interruptFlag_) {
+        acceptCount_++;
+        Serial.printf("Button pressed! Accepted: %lu, dt: %lu us\n",
+                       acceptCount_,
+                       (micros() - lastInterruptTime_));
+        interruptFlag_ = false;
+    }
+}
+
+bool ButtonSimpleArduino::readButtonState() {
+    return (mode == INPUT_PULLUP) ? !readPin() : readPin();
+}
+
+bool ButtonSimpleArduino::readPin() { return digitalRead(pin_); }
 
 void IRAM_ATTR ButtonSimpleArduino::isrHandler(void* arg) {
     auto* self = static_cast<ButtonSimpleArduino*>(arg);
-    self->interruptCount_++;
     self->lastInterruptTime_ = micros();
     self->interruptFlag_ = true;
 }
 
-void IRAM_ATTR ButtonFSMArduino::isrHandler(void* arg) {
-    auto* self = static_cast<ButtonFSMArduino*>(arg);
-    self->interruptCount_++;
-    self->lastInterruptTime_ = micros();
-    self->interruptFlag_ = true;
+// ── ButtonFSMArduino ──────────────────────────────────────────────
+
+ButtonFSMArduino::ButtonFSMArduino(uint8_t pin, uint16_t debounce_time,
+                                     uint16_t short_press_time,
+                                     uint16_t long_press_time, uint8_t mode)
+    : ButtonFSM(pin, debounce_time, short_press_time, long_press_time),
+      mode(mode) {}
+
+void ButtonFSMArduino::init() {
+    pinMode(pin_, mode);
+    attachInterruptArg(digitalPinToInterrupt(pin_), isrHandler, this, FALLING);
 }
 
-// ── Shared logic (defined once per translation unit) ───────────────
-
-void ButtonSimple::update() {
-    pressed_ = readButtonState();
-}
-
-bool ButtonSimple::isPressed() {
-    bool p = pressed_;
-    pressed_ = false;
-    return p;
-}
-
-void ButtonFSM::update() {
+void ButtonFSMArduino::update() {
     uint32_t currentTime = millis();
     bool pressed = readButtonState();
 
@@ -67,16 +86,14 @@ void ButtonFSM::update() {
     }
 }
 
-bool ButtonFSM::isPressed(bool &is_long_press) {
-    if (state_ == ButtonState::Idle && lastChangeTime_ != 0) {
-        is_long_press = false;
-        lastChangeTime_ = 0;
-        return true;
-    }
-    if (state_ == ButtonState::Held) {
-        is_long_press = true;
-        return true;
-    }
-    is_long_press = false;
-    return false;
+bool ButtonFSMArduino::readButtonState() {
+    return (mode == INPUT_PULLUP) ? !readPin() : readPin();
+}
+
+bool ButtonFSMArduino::readPin() { return digitalRead(pin_); }
+
+void IRAM_ATTR ButtonFSMArduino::isrHandler(void* arg) {
+    auto* self = static_cast<ButtonFSMArduino*>(arg);
+    self->lastInterruptTime_ = micros();
+    self->interruptFlag_ = true;
 }

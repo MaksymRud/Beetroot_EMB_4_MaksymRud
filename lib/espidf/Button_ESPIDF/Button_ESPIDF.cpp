@@ -1,10 +1,12 @@
 #include "Button_ESPIDF.h"
 
-// ── Static flags ──────────────────────────────────────────────────
-bool ButtonSimpleESPIDF::isrServiceInstalled_ = false;
-bool ButtonFSMESPIDF::isrServiceInstalled_    = false;
+// ── ButtonSimpleESPIDF ────────────────────────────────────────────
 
-// ── init() implementations ────────────────────────────────────────
+bool ButtonSimpleESPIDF::isrServiceInstalled_ = false;
+
+ButtonSimpleESPIDF::ButtonSimpleESPIDF(uint8_t pin, uint16_t debounce_time,
+                                       bool pullup)
+    : ButtonSimple(pin, debounce_time), acceptCount_(0), pullup_(pullup) {}
 
 void ButtonSimpleESPIDF::init() {
     gpio_config_t cfg = {};
@@ -12,7 +14,7 @@ void ButtonSimpleESPIDF::init() {
     cfg.mode = GPIO_MODE_INPUT;
     cfg.pull_up_en = pullup_ ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
     cfg.pull_down_en = pullup_ ? GPIO_PULLDOWN_DISABLE : GPIO_PULLDOWN_ENABLE;
-    cfg.intr_type = GPIO_INTR_NEGEDGE;
+    cfg.intr_type = pullup_ ? GPIO_INTR_NEGEDGE : GPIO_INTR_POSEDGE;
     gpio_config(&cfg);
 
     if (!isrServiceInstalled_) {
@@ -21,6 +23,38 @@ void ButtonSimpleESPIDF::init() {
     }
     gpio_isr_handler_add((gpio_num_t)pin_, isrHandler, this);
 }
+
+void ButtonSimpleESPIDF::update() {
+    if (interruptFlag_) {
+        acceptCount_++;
+        printf("Button pressed! Accepted: %lu, dt: %lu us\n",
+               acceptCount_,
+               (uint32_t)(esp_timer_get_time() - lastInterruptTime_));
+        interruptFlag_ = false;
+    }
+}
+
+bool ButtonSimpleESPIDF::readButtonState() {
+    return pullup_ ? !readPin() : readPin();
+}
+
+bool ButtonSimpleESPIDF::readPin() { return gpio_get_level((gpio_num_t)pin_) == 1; }
+
+void IRAM_ATTR ButtonSimpleESPIDF::isrHandler(void* arg) {
+    auto* self = static_cast<ButtonSimpleESPIDF*>(arg);
+    self->lastInterruptTime_ = (uint32_t)(esp_timer_get_time());
+    self->interruptFlag_ = true;
+}
+
+// ── ButtonFSMESPIDF ───────────────────────────────────────────────
+
+bool ButtonFSMESPIDF::isrServiceInstalled_ = false;
+
+ButtonFSMESPIDF::ButtonFSMESPIDF(uint8_t pin, uint16_t debounce_time,
+                                   uint16_t short_press_time,
+                                   uint16_t long_press_time, bool pullup)
+    : ButtonFSM(pin, debounce_time, short_press_time, long_press_time),
+      pullup_(pullup) {}
 
 void ButtonFSMESPIDF::init() {
     gpio_config_t cfg = {};
@@ -28,7 +62,7 @@ void ButtonFSMESPIDF::init() {
     cfg.mode = GPIO_MODE_INPUT;
     cfg.pull_up_en = pullup_ ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
     cfg.pull_down_en = pullup_ ? GPIO_PULLDOWN_DISABLE : GPIO_PULLDOWN_ENABLE;
-    cfg.intr_type = GPIO_INTR_NEGEDGE;
+    cfg.intr_type = pullup_ ? GPIO_INTR_NEGEDGE : GPIO_INTR_POSEDGE;
     gpio_config(&cfg);
 
     if (!isrServiceInstalled_) {
@@ -38,35 +72,7 @@ void ButtonFSMESPIDF::init() {
     gpio_isr_handler_add((gpio_num_t)pin_, isrHandler, this);
 }
 
-// ── ISR handlers ──────────────────────────────────────────────────
-
-void IRAM_ATTR ButtonSimpleESPIDF::isrHandler(void* arg) {
-    auto* self = static_cast<ButtonSimpleESPIDF*>(arg);
-    self->interruptCount_++;
-    self->lastInterruptTime_ = (uint32_t)(esp_timer_get_time());
-    self->interruptFlag_ = true;
-}
-
-void IRAM_ATTR ButtonFSMESPIDF::isrHandler(void* arg) {
-    auto* self = static_cast<ButtonFSMESPIDF*>(arg);
-    self->interruptCount_++;
-    self->lastInterruptTime_ = (uint32_t)(esp_timer_get_time());
-    self->interruptFlag_ = true;
-}
-
-// ── Shared logic (defined once per translation unit) ───────────────
-
-void ButtonSimple::update() {
-    pressed_ = readButtonState();
-}
-
-bool ButtonSimple::isPressed() {
-    bool p = pressed_;
-    pressed_ = false;
-    return p;
-}
-
-void ButtonFSM::update() {
+void ButtonFSMESPIDF::update() {
     uint32_t currentTime = (uint32_t)(esp_timer_get_time() / 1000);
     bool pressed = readButtonState();
 
@@ -105,16 +111,14 @@ void ButtonFSM::update() {
     }
 }
 
-bool ButtonFSM::isPressed(bool &is_long_press) {
-    if (state_ == ButtonState::Idle && lastChangeTime_ != 0) {
-        is_long_press = false;
-        lastChangeTime_ = 0;
-        return true;
-    }
-    if (state_ == ButtonState::Held) {
-        is_long_press = true;
-        return true;
-    }
-    is_long_press = false;
-    return false;
+bool ButtonFSMESPIDF::readButtonState() {
+    return pullup_ ? !readPin() : readPin();
+}
+
+bool ButtonFSMESPIDF::readPin() { return gpio_get_level((gpio_num_t)pin_) == 1; }
+
+void IRAM_ATTR ButtonFSMESPIDF::isrHandler(void* arg) {
+    auto* self = static_cast<ButtonFSMESPIDF*>(arg);
+    self->lastInterruptTime_ = (uint32_t)(esp_timer_get_time());
+    self->interruptFlag_ = true;
 }

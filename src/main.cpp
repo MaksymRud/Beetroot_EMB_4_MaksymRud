@@ -7,7 +7,6 @@
 #define LogicAnalizer_Pin 21
 
 static ButtonSimpleArduino button(Button_Pin, 50);
-int accept_button_counter = 0;
 
 void setup() {
     Serial.begin(115200);
@@ -18,13 +17,6 @@ void setup() {
 
 void loop() {
     button.update();
-    if (button.isPressed()) {
-        accept_button_counter++;
-        Serial.printf("Button pressed! Accepted: %d, Interrupts: %lu, dt: %lu us\n",
-                       accept_button_counter,
-                       button.interruptCount_,
-                       (micros() - button.lastInterruptTime_));
-    }
     digitalWrite(LogicAnalizer_Pin, digitalRead(Button_Pin));
 }
 
@@ -55,10 +47,6 @@ extern "C" void app_main(void) {
 
     while (1) {
         button.update();
-        if (button.isPressed()) {
-            printf("Button pressed! Interrupts: %lu\n",
-                   button.interruptCount_);
-        }
         gpio_set_level((gpio_num_t)LogicAnalizer_Pin,
                        gpio_get_level((gpio_num_t)Button_Pin));
         vTaskDelay(pdMS_TO_TICKS(10));
