@@ -6,7 +6,7 @@
 #define Button_Pin 6
 #define LogicAnalizer_Pin 21
 
-static ButtonSimpleArduino button(Button_Pin, 50);
+static ButtonFSMArduino button(Button_Pin, 50, 50, 50, INPUT_PULLUP);
 
 void setup() {
     Serial.begin(115200);
@@ -42,7 +42,7 @@ extern "C" void app_main(void) {
     gpio_config(&io_conf);
     gpio_set_level((gpio_num_t)LogicAnalizer_Pin, 0);
 
-    ButtonSimpleESPIDF button(Button_Pin, 50);
+    ButtonFSMESPIDF button(Button_Pin, 50, 50, 50, true);
     button.init();
 
     while (1) {
