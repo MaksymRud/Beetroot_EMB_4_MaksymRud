@@ -26,11 +26,12 @@ void ButtonSimpleESPIDF::init() {
 
 void ButtonSimpleESPIDF::update() {
     if (interruptFlag_) {
-        acceptCount_++;
-        printf("Button pressed! Accepted: %lu, dt: %lu us\n",
-               acceptCount_,
-               (uint32_t)(esp_timer_get_time() - lastInterruptTime_));
-        interruptFlag_ = false;
+        if ((uint32_t)(esp_timer_get_time() - lastInterruptTime_) >= debounce_time_) {
+            acceptCount_++;
+            printf("Button pressed! Accepted: %d, Time since last: %lu us\n",
+                            acceptCount_, (uint32_t)(esp_timer_get_time() - lastInterruptTime_));
+            interruptFlag_ = false;
+        }
     }
 }
 

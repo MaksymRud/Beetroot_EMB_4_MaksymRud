@@ -2,9 +2,9 @@
 
 // ── ButtonSimpleArduino ───────────────────────────────────────────
 
-ButtonSimpleArduino::ButtonSimpleArduino(uint8_t pin, uint16_t debounce_time,
+ButtonSimpleArduino::ButtonSimpleArduino(uint8_t pin, uint16_t debounce_time_ms,
                                          uint8_t mode)
-    : ButtonSimple(pin, debounce_time),
+    : ButtonSimple(pin, debounce_time_ms),
       mode(mode), acceptCount_(0) {}
 
 void ButtonSimpleArduino::init() {
@@ -14,11 +14,12 @@ void ButtonSimpleArduino::init() {
 
 void ButtonSimpleArduino::update() {
     if (interruptFlag_) {
-        acceptCount_++;
-        Serial.printf("Button pressed! Accepted: %lu, dt: %lu us\n",
-                       acceptCount_,
-                       (micros() - lastInterruptTime_));
-        interruptFlag_ = false;
+        if (micros() - lastInterruptTime_ >= debounce_time_) {
+            acceptCount_++;
+            Serial.printf("Button pressed! Accepted: %d, Time since last: %lu us\n",
+                            acceptCount_, micros() - lastInterruptTime_);
+            interruptFlag_ = false;
+        }
     }
 }
 
