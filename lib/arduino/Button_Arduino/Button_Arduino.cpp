@@ -14,11 +14,46 @@ void ButtonSimpleArduino::init() {
 
 void ButtonSimpleArduino::update() {
     if (interruptFlag_) {
-        if (micros() - lastInterruptTime_ >= debounce_time_) {
-            acceptCount_++;
-            Serial.printf("Button pressed! Accepted: %d, Time since last: %lu us\n",
-                            acceptCount_, micros() - lastInterruptTime_);
-            interruptFlag_ = false;
+        int pinState = readButtonState();
+        switch (state())
+        {
+            case ButtonState::Idle:
+                if (pinState == LOW) {
+                    lastButtonStateChangeTime_us = micros();
+                    buttonStartWaitAcceptanceTime_us = micros();
+                    state_ = ButtonState::Pressed;
+                } else {
+                    state_ = ButtonState::Idle;
+                }
+                break;
+            case ButtonState::Pressed:
+                if (pinState == LOW) {
+                    if (micros() - lastButtonStateChangeTime_us >= debounce_time_ * 1000) {
+                        state_ = ButtonState::Held;
+                    }
+                }
+                break;
+            case ButtonState::Held:
+                if (pinState == LOW) {
+                    state_ = ButtonState::Held;
+                } else {
+                    lastButtonStateChangeTime_us = micros();
+                    state_ = ButtonState::Released;
+                }
+                break;
+            case ButtonState::Released:
+                if (pinState == HIGH) {
+                    if (micros() - lastButtonStateChangeTime_us >= debounce_time_ * 1000) {
+                        state_ = ButtonState::Idle;
+                        acceptCount_++;
+                        unsigned long dt = micros() - buttonStartWaitAcceptanceTime_us;
+                        Serial.printf("Button pressed (pin LOW)! Accepted: %d, ISR->accept: %lu ms\n", acceptCount_, dt / 1000);
+                        interruptFlag_ = false;
+                    }
+                };
+                break;
+            default:
+                break;
         }
     }
 }

@@ -26,11 +26,46 @@ void ButtonSimpleESPIDF::init() {
 
 void ButtonSimpleESPIDF::update() {
     if (interruptFlag_) {
-        if ((uint32_t)(esp_timer_get_time() - lastInterruptTime_) >= debounce_time_) {
-            acceptCount_++;
-            printf("Button pressed! Accepted: %d, Time since last: %lu us\n",
-                            acceptCount_, (uint32_t)(esp_timer_get_time() - lastInterruptTime_));
-            interruptFlag_ = false;
+        int pinState = readButtonState();
+        switch (state())
+        {
+            case ButtonState::Idle:
+                if (pinState == 0) {
+                    lastButtonStateChangeTime_us = esp_timer_get_time();
+                    buttonStartWaitAcceptanceTime_us = esp_timer_get_time();
+                    state_ = ButtonState::Pressed;
+                } else {
+                    state_ = ButtonState::Idle;
+                }
+                break;
+            case ButtonState::Pressed:
+                if (pinState == 0) {
+                    if (esp_timer_get_time() - lastButtonStateChangeTime_us >= debounce_time_ * 1000) {
+                        state_ = ButtonState::Held;
+                    }
+                }
+                break;
+            case ButtonState::Held:
+                if (pinState == 0) {
+                    state_ = ButtonState::Held;
+                } else {
+                    lastButtonStateChangeTime_us = esp_timer_get_time();
+                    state_ = ButtonState::Released;
+                }
+                break;
+            case ButtonState::Released:
+                if (pinState == 0) {
+                    if (esp_timer_get_time() - lastButtonStateChangeTime_us >= debounce_time_ * 1000) {
+                        state_ = ButtonState::Idle;
+                        acceptCount_++;
+                        unsigned long dt = (esp_timer_get_time() - buttonStartWaitAcceptanceTime_us) / 1000;
+                        printf("Button pressed (pin LOW)! Accepted: %d, ISR->accept: %lu ms\n", acceptCount_, dt);
+                        interruptFlag_ = false;
+                    }
+                };
+                break;
+            default:
+                break;
         }
     }
 }

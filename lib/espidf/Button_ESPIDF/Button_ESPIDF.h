@@ -16,8 +16,13 @@ public:
     bool readButtonState() override;
     static void IRAM_ATTR isrHandler(void* arg);
     static bool isrServiceInstalled_;
+    uint32_t lastButtonStateChangeTime_us;
+    uint32_t buttonStartWaitAcceptanceTime_us;
+    bool readButtonState() override;
+    ButtonState state() const { return state_; }
 protected:
     bool readPin() override;
+    ButtonState state_;
 };
 
 class ButtonFSMESPIDF : public ButtonFSM {

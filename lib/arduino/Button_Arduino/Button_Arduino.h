@@ -12,9 +12,13 @@ public:
     void update() override;
     uint8_t mode;
     uint32_t acceptCount_;
+    uint32_t lastButtonStateChangeTime_us;
+    uint32_t buttonStartWaitAcceptanceTime_us;
     bool readButtonState() override;
+    ButtonState state() const { return state_; }
 protected:
     bool readPin() override;
+    ButtonState state_;
 private:
     static void IRAM_ATTR isrHandler(void* arg);
 };
