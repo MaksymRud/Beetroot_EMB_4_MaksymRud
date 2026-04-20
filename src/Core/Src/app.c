@@ -2,6 +2,7 @@
 #include "main.h"
 
 void setup() {
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
     /*Configure GPIO pin Output Level */
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
