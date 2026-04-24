@@ -1,0 +1,19 @@
+{
+    // Use the STM32 clangd extension for IntelliSense (not ms-vscode.cpptools)
+    "stm32cube-ide-clangd.path": "/usr/bin/clangd",
+    "stm32cube-ide-clangd.enable": true,
+    "stm32cube-ide-clangd.enableCodeCompletion": true,
+    "stm32cube-ide-clangd.enableLinting": true,
+    "stm32cube-ide-clangd.enableHover": true,
+    "stm32cube-ide-clangd.arguments": [
+        "--background-index",
+        "--clang-tidy",
+        "--header-insertion=iwyu",
+        "--completion-style=detailed",
+        "--query-driver=/home/chestar/.platformio/packages/toolchain-gccarmnoneeabi*/bin/arm-none-eabi-gcc"
+    ],
+
+    // Disable cpptools IntelliSense to avoid conflict with clangd
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "cmake.sourceDirectory": "/home/chestar/Projects/Embedded/Beetroot_EMB_4_MaksymRud/src/Drivers/CMSIS/DSP/Source/BayesFunctions"
+}

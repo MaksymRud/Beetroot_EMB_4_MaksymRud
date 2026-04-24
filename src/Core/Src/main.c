@@ -43,7 +43,6 @@
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -56,6 +55,13 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+  // Цей callback викликається, коли UART отримав дані
+  if (huart->Instance == USART2) {
+    
+  }
+}
 
 /* USER CODE END 0 */
 
@@ -91,6 +97,8 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  uint8_t rxData[1];
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -98,7 +106,11 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+    // Неблокуючий прийом із таймаутом 0 (проверка без очікування)
+    if (HAL_UART_Receive(&huart2, rxData, 1, 0) == HAL_OK) {
+      // Отримали 1 байт, надсилаємо відповідь
+      HAL_UART_Transmit(&huart2, (uint8_t*)"OK\r\n", 4, 100);
+    }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
