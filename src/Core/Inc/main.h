@@ -31,7 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+void main_cpp();
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -46,7 +46,7 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-
+extern UART_HandleTypeDef huart2;
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
@@ -59,6 +59,8 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define ButtonPin_Pin GPIO_PIN_9
 #define ButtonPin_GPIO_Port GPIOA
+#define LedPin_Pin GPIO_PIN_10
+#define LedPin_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 

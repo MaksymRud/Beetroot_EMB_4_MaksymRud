@@ -43,6 +43,7 @@
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -55,13 +56,6 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-  // Цей callback викликається, коли UART отримав дані
-  if (huart->Instance == USART2) {
-    
-  }
-}
 
 /* USER CODE END 0 */
 
@@ -97,20 +91,22 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  uint8_t rxData[1];
+  //uint8_t rxData[1];
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  main_cpp();
+
   while (1)
   {
     /* USER CODE END WHILE */
     // Неблокуючий прийом із таймаутом 0 (проверка без очікування)
-    if (HAL_UART_Receive(&huart2, rxData, 1, 0) == HAL_OK) {
-      // Отримали 1 байт, надсилаємо відповідь
-      HAL_UART_Transmit(&huart2, (uint8_t*)"OK\r\n", 4, 100);
-    }
+    // if (HAL_UART_Receive(&huart2, rxData, 1, 0) == HAL_OK) {
+    //   // Отримали 1 байт, надсилаємо відповідь
+    //   HAL_UART_Transmit(&huart2, (uint8_t*)"OK\r\n", 4, 100);
+    // }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -210,11 +206,21 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LedPin_GPIO_Port, LedPin_Pin, GPIO_PIN_SET);
+
   /*Configure GPIO pin : ButtonPin_Pin */
   GPIO_InitStruct.Pin = ButtonPin_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(ButtonPin_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LedPin_Pin */
+  GPIO_InitStruct.Pin = LedPin_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LedPin_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
