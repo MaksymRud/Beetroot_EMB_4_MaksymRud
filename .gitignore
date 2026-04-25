@@ -4,3 +4,74 @@
 .vscode/launch.json
 .vscode/ipch
 compile_commands.json
+
+# Local index/cache folder created by clangd
+.cache/
+# Specific background index folder
+.cache/clangd/
+
+
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+CMakeUserPresets.json
+
+# --- CMake ---
+# Ignore the entire build directory (standard naming is 'build' or 'out')
+build/
+out/
+bin/
+
+# Specific CMake generated files (if not using a subfolder)
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# --- Visual Studio Code ---
+.vscode/*
+
+# --- Visual Studio (if using MSVC/Windows) ---
+.vs/
+*.user
+*.suo
+*.sln.docstates
+
+# --- C++ Artifacts ---
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# --- Other / OS Specific ---
+.DS_Store
+Thumbs.db
