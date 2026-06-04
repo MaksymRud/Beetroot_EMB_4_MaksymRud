@@ -78,22 +78,20 @@ void loop() {
   // Time to switch config?
   if ((now - before) >= 10000) {
     before = now;
-    // Advance to next pair
+
     arr_index++;
-    // End condition: stop forever
+
     if (arr_index >= params_len) {
       Serial.println("Done. Reached end of params_arr. Starting from the first params pair.");
       arr_index = 0; // Reset to the first params pair
     }
 
-    // Apply next config
     int resBits = params_arr[arr_index].resolution;
     adc_attenuation_t att = params_arr[arr_index].attenuation;
     delay(500);
     analogReadResolution(resBits);
     analogSetPinAttenuation(ADC_INPUT_PIN, att);
 
-    // Recommended: dummy read + short settle after changing attenuation/resolution
     (void)analogRead(ADC_INPUT_PIN);
     delayMicroseconds(50);
     Serial.println("--------------------------------------------------");
