@@ -13,13 +13,13 @@ void setup() {
     Serial.begin(115200);
     pinMode(RED_LED, OUTPUT);
     pinMode(BLUE_LED, OUTPUT);
-    pinMode(BUTTON_MODE_UP, INPUT_PULLUP);
-    pinMode(BUTTON_MODE_DOWN, INPUT_PULLUP);
+    pinMode(BUTTON_MODE_UP, INPUT_PULLDOWN);
+    pinMode(BUTTON_MODE_DOWN, INPUT_PULLDOWN);
 }
 
 
 void loop() {
-    while (digitalRead(BUTTON_MODE_UP) != LOW && digitalRead(BUTTON_MODE_DOWN) != LOW) {
+    while (digitalRead(BUTTON_MODE_UP) == LOW && digitalRead(BUTTON_MODE_DOWN) == LOW) {
         // Wait for button release to avoid multiple triggers
         digitalWrite(RED_LED, HIGH);
         digitalWrite(BLUE_LED, LOW);
@@ -27,34 +27,27 @@ void loop() {
         digitalWrite(RED_LED, LOW);
         digitalWrite(BLUE_LED, HIGH);
         delay(delay_modes_array[current_mode]);
-        delay(10);
     }
 
-    if (digitalRead(BUTTON_MODE_UP) == LOW) {
+    if (digitalRead(BUTTON_MODE_UP) == HIGH) {
         Serial.println("Button UP pressed");
-        delay(50);
+        delay(30);
 
-        while (digitalRead(BUTTON_MODE_UP) == LOW) {
-            delay(10);
-        }
-        current_mode += 1; // Cycle through modes
+        current_mode++; // Cycle through modes
         if (current_mode >= modes_length) {
-            current_mode = modes_length - 1; // Wrap around to the first mode
+            current_mode = 0; // Wrap around to the first mode
         }
         Serial.print("Current mode: ");
         Serial.println(current_mode);
     }
 
-    if (digitalRead(BUTTON_MODE_DOWN) == LOW) {
+    if (digitalRead(BUTTON_MODE_DOWN) == HIGH) {
         Serial.println("Button DOWN pressed");
-        delay(50);
+        delay(30);
 
-        while (digitalRead(BUTTON_MODE_DOWN) == LOW) {
-            delay(10);
-        }
-        current_mode = (current_mode - 1);// Cycle through modes in reverse
+        current_mode--; // Cycle through modes in reverse
         if (current_mode < 0) {
-            current_mode = 0; // Wrap around to the last mode
+            current_mode = modes_length - 1; // Wrap around to the last mode
         }
         Serial.print("Current mode: ");
         Serial.println(current_mode);
