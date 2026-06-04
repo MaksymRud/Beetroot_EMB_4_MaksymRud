@@ -12,12 +12,6 @@ enum class ButtonState : uint8_t {
 
 class ButtonSimpleSTM32 {
 private:
-    void transmit()
-    {
-        HAL_UART_Transmit(huart_, (uint8_t*)"OK\r\n", 4, 100);
-    }
-
-    UART_HandleTypeDef* huart_;
     ButtonState state_ {ButtonState::Idle};
     GPIO_TypeDef* port_;
     const uint16_t pin_;
@@ -26,8 +20,10 @@ private:
     uint32_t lastButtonStateChangeTimeMs_;
 
 public:
-    explicit ButtonSimpleSTM32(UART_HandleTypeDef* huart, GPIO_TypeDef* port,  uint16_t pin, uint16_t debounceTime): 
-    huart_(huart), port_(port), pin_(pin), debounceTime_(debounceTime) { }
+    bool registeredPress {false};
+
+    explicit ButtonSimpleSTM32(GPIO_TypeDef* port,  uint16_t pin, uint16_t debounceTime):
+    port_(port), pin_(pin), debounceTime_(debounceTime) { }
 
     void update()
     {
@@ -63,6 +59,7 @@ public:
                         if (HAL_GetTick() - lastButtonStateChangeTimeMs_ >= debounceTime_) {
                             state_ = ButtonState::Idle;
                             interruptFlag = false;
+                            registeredPress = true;
                         }
                     };
                     break;
@@ -105,11 +102,15 @@ extern "C"
     void main_cpp()
     {
         Led led(LedPin_GPIO_Port, LedPin_Pin);
-        ButtonSimpleSTM32 button(&huart2, ButtonPin_GPIO_Port, ButtonPin_Pin, 50);
+        ButtonSimpleSTM32 button(ButtonPin_GPIO_Port, ButtonPin_Pin, 50);
 
         while(1)
         {
             button.update();
+            if (button.registeredPress) {
+                button.registeredPress = false;
+                HAL_UART_Transmit(&huart2, (uint8_t*)"LED\r\n", 5, 100);
+            }
 
             if (fire_led)
             {
